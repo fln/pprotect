@@ -5,34 +5,25 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"runtime"
+	"runtime/debug"
 	"time"
 )
 
-// PanicHandler is a callback function type. It gets called with has panic value
-// and stack trace dump.
+// PanicHandler is a callback function type for handling panics, it gets passed
+// panic value and stack trace.
 type PanicHandler func(val interface{}, stack []byte)
-
-// StackSize is the upper limit of bytes of stacktrace that will be passed to
-// the panic handler. Default value of 8 kb should be suitable in most cases.
-// If there is a need for larger stack traces this value can be changed during
-// application execution. Note: this variable is not protected by any
-// synchronization primitive, thus this value should be set before using any of
-// the functions in this package.
-var StackSize = 1024 * 8
 
 // StdoutPanicHandler is an instance of NewPrintPanicHandler which prints panics
 // to STDOUT.
 var StdoutPanicHandler = NewPrintPanicHandler(os.Stdout)
 
-// Call executes funcion f and converts panic to a return argument val. It also
+// Call executes function f and converts panic to a return argument val. It also
 // returns a stack trace as a byte slice. If function f does not panic nil, nil
-// is returned. Call is useful for converting panics to return agruments.
+// is returned. Call is useful for converting panics to return arguments.
 func Call(f func()) (val interface{}, stack []byte) {
 	defer func() {
 		if val = recover(); val != nil {
-			stack = make([]byte, StackSize)
-			stack = stack[:runtime.Stack(stack, false)]
+			stack = debug.Stack()
 		}
 	}()
 	f()
@@ -41,18 +32,20 @@ func Call(f func()) (val interface{}, stack []byte) {
 
 // CallLoop executes a function f. If function panics it will call a panic
 // handler with panic value and stack trace and restart the function after time
-// specified in restartAfter. It is useful for protecting long runing global
+// specified in restartAfter. It is useful for protecting long running global
 // goroutines from bringing whole application down in case of unexpected panic.
 // If function f exits without panicking, function will not be restarted.
 //
 // To wrap function with arguments use a closure.
-func CallLoop(f func(), handler PanicHandler, restartAfter time.Duration) {
+func CallLoop(f func(), restartAfter time.Duration, handlers ...PanicHandler) {
 	for {
 		val, stack := Call(f)
 		if val == nil {
 			return
 		}
-		handler(val, stack)
+		for _, h := range handlers {
+			h(val, stack)
+		}
 		time.Sleep(restartAfter)
 	}
 }

@@ -46,7 +46,7 @@ func expectNPanics(t *testing.T, n int) {
 		count++
 	}
 
-	CallLoop(obj.do, panicFn, time.Millisecond)
+	CallLoop(obj.do, time.Millisecond, panicFn)
 	if count != n {
 		t.Errorf("CallLoop() called panic handler %d times, expected %d", count, n)
 	}
@@ -74,7 +74,7 @@ func ExampleCallLoop() {
 		// Some long running job, that might panic and should be
 		//restarted
 	}
-	go CallLoop(myFunc, StdoutPanicHandler, time.Second)
+	go CallLoop(myFunc, time.Second, StdoutPanicHandler)
 }
 
 func ExampleCallLoop_blocking() {
@@ -82,11 +82,11 @@ func ExampleCallLoop_blocking() {
 		// Some code that might panic and should be restarted
 	}
 	// Call to CallLoop will block until myFunc is finished without panics
-	CallLoop(myFunc, StdoutPanicHandler, time.Second)
+	CallLoop(myFunc, time.Second, StdoutPanicHandler)
 }
 
 func ExampleCallLoop_closure() {
 	go CallLoop(func() {
 		fmt.Println("some", "arguments")
-	}, StdoutPanicHandler, time.Second)
+	}, time.Second, StdoutPanicHandler)
 }
