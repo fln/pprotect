@@ -17,6 +17,16 @@ type HTTPPanicHandler func(r *http.Request, val interface{}, stack []byte)
 // prints panics to STDOUT.
 var StdoutHTTPPanicHandler = NewPrintHTTPPanicHandler(os.Stdout)
 
+// HTTPRecovery returns partially applied version of HTTPRecoveryHandler. It is
+// useful for middleware utilities that requires
+// 	func(h http.Handler) http.Handler
+// generator signature.
+func HTTPRecovery(handlers ...HTTPPanicHandler) func(h http.Handler) http.Handler {
+	return func(h http.Handler) http.Handler {
+		return HTTPRecoveryHandler(h, handlers...)
+	}
+}
+
 // HTTPRecoveryHandler creates a new HTTP middleware that recovers from panics.
 // In case of panic this handler will call each panic handler in handlers slice
 // and then return HTTP response with status code 500 (internal server error),
